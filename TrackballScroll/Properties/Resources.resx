@@ -162,4 +162,7 @@ https://github.com/Seelge/TrackballScroll/blob/master/LICENSE</value>
   <data name="TextButtonEmulateMiddleButton" xml:space="preserve">
     <value>Emulate middle button when not scrolling</value>
   </data>
+  <data name="TextButtonHookUseRButton" xml:space="preserve">
+    <value>Use right (context menu) button to scroll</value>
+  </data>
 </root>

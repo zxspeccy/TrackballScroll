@@ -34,6 +34,7 @@ namespace TrackballScroll
         private System.Timers.Timer timer { get; set; }
         public bool useX1 { get; set; }
         public bool useX2 { get; set; }
+        public bool useRButton { get; set; }
         public bool emulateMiddleButton { get; set; }
 
         enum State
@@ -74,8 +75,8 @@ namespace TrackballScroll
             }
 
             bool preventCallNextHookEx = false;
-            WinAPI.MSLLHOOKSTRUCT p = (WinAPI.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(WinAPI.MSLLHOOKSTRUCT));
-            uint xbutton = GetXButtonState(p);
+            WinAPI.MSLLHOOKSTRUCT msllhookstruct = (WinAPI.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(WinAPI.MSLLHOOKSTRUCT));
+            uint xbutton = GetXButtonState(msllhookstruct);
 
 #if DEBUG
             var oldState = _state;
@@ -85,11 +86,11 @@ namespace TrackballScroll
             switch (_state)
             {
                 case State.NORMAL:
-                    if (IsMessageButtonDown(wParam, p))
+                    if (IsMessageButtonDown(wParam, msllhookstruct))
                     { // NORMAL->DOWN: remember position
                         preventCallNextHookEx = true;
                         _state = State.DOWN;
-                        _origin = p.pt;
+                        _origin = msllhookstruct.pt;
                         _originScaled = System.Windows.Forms.Cursor.Position;
 #if DEBUG
                         log.Trace(String.Format("{0}->{1} set origin {2},{3} scaled {4},{5}", oldState, _state, _origin.x, _origin.y, _originScaled.X, _originScaled.Y));
@@ -97,30 +98,29 @@ namespace TrackballScroll
                     }
                     break;
                 case State.DOWN:
-                    if (IsMessageButtonUp(wParam, p))
+                    if (IsMessageButtonUp(wParam, msllhookstruct))
                     { // DOWN->NORMAL: middle button click
                         _state = State.NORMAL;
-                        if(!emulateMiddleButton)
+                        if (emulateMiddleButton && UseXButtons(msllhookstruct))
                         {
-                            break;
+                            preventCallNextHookEx = true;
+                            WinAPI.INPUT[] input = new WinAPI.INPUT[2];
+                            input[0].type = WinAPI.INPUT_MOUSE;
+                            input[0].mi.dx = msllhookstruct.pt.x;
+                            input[0].mi.dy = msllhookstruct.pt.y;
+                            input[0].mi.mouseData = 0x0;
+                            input[0].mi.dwFlags = (uint)WinAPI.MouseEvent.MOUSEEVENTF_MIDDLEDOWN; // middle button down
+                            input[0].mi.time = 0x0;
+                            input[0].mi.dwExtraInfo = IntPtr.Zero;
+                            input[1].type = WinAPI.INPUT_MOUSE;
+                            input[1].mi.dx = msllhookstruct.pt.x;
+                            input[1].mi.dy = msllhookstruct.pt.y;
+                            input[1].mi.mouseData = 0x0;
+                            input[1].mi.dwFlags = (uint)WinAPI.MouseEvent.MOUSEEVENTF_MIDDLEUP; // middle button up
+                            input[1].mi.time = 0x0;
+                            input[1].mi.dwExtraInfo = IntPtr.Zero;
+                            NativeMethods.SendInput((uint)input.Length, input, Marshal.SizeOf(typeof(WinAPI.INPUT)));                           
                         }
-                        preventCallNextHookEx = true;
-                        WinAPI.INPUT[] input = new WinAPI.INPUT[2];
-                        input[0].type = WinAPI.INPUT_MOUSE;
-                        input[0].mi.dx = p.pt.x;
-                        input[0].mi.dy = p.pt.y;
-                        input[0].mi.mouseData = 0x0;
-                        input[0].mi.dwFlags = (uint)WinAPI.MouseEvent.MOUSEEVENTF_MIDDLEDOWN; // middle button down
-                        input[0].mi.time = 0x0;
-                        input[0].mi.dwExtraInfo = IntPtr.Zero;
-                        input[1].type = WinAPI.INPUT_MOUSE;
-                        input[1].mi.dx = p.pt.x;
-                        input[1].mi.dy = p.pt.y;
-                        input[1].mi.mouseData = 0x0;
-                        input[1].mi.dwFlags = (uint)WinAPI.MouseEvent.MOUSEEVENTF_MIDDLEUP; // middle button up
-                        input[1].mi.time = 0x0;
-                        input[1].mi.dwExtraInfo = IntPtr.Zero;
-                        NativeMethods.SendInput((uint)input.Length, input, Marshal.SizeOf(typeof(WinAPI.INPUT)));
                     }
                     else if (WinAPI.MouseMessages.WM_MOUSEMOVE == (WinAPI.MouseMessages)wParam)
                     { // DOWN->SCROLL
@@ -132,7 +132,7 @@ namespace TrackballScroll
                     }
                     break;
                 case State.SCROLL:
-                    if (IsMessageButtonUp(wParam, p))
+                    if (IsMessageButtonUp(wParam, msllhookstruct))
                     { // SCROLL->NORMAL
                         preventCallNextHookEx = true;
                         _state = State.NORMAL;
@@ -140,8 +140,8 @@ namespace TrackballScroll
                     if (WinAPI.MouseMessages.WM_MOUSEMOVE == (WinAPI.MouseMessages)wParam)
                     { // SCROLL->SCROLL: wheel event
                         preventCallNextHookEx = true;
-                        _xcount += p.pt.x - _origin.x;
-                        _ycount += p.pt.y - _origin.y;
+                        _xcount += msllhookstruct.pt.x - _origin.x;
+                        _ycount += msllhookstruct.pt.y - _origin.y;
 
                         System.Windows.Forms.Cursor.Position = _originScaled;
                         if (_xcount < -X_THRESHOLD || _xcount > X_THRESHOLD)
@@ -156,8 +156,8 @@ namespace TrackballScroll
                             for (uint i = 0; i < WHEEL_FACTOR; ++i)
                             {
                                 input[i].type = WinAPI.INPUT_MOUSE;
-                                input[i].mi.dx = p.pt.x;
-                                input[i].mi.dy = p.pt.y;
+                                input[i].mi.dx = msllhookstruct.pt.x;
+                                input[i].mi.dy = msllhookstruct.pt.y;
                                 input[i].mi.mouseData = mouseData;
                                 input[i].mi.dwFlags = (uint)WinAPI.MouseEvent.MOUSEEVENTF_HWHEEL; // horizontal wheel
                                 input[i].mi.time = 0x0;
@@ -182,8 +182,8 @@ namespace TrackballScroll
                             for (uint i = 0; i < WHEEL_FACTOR; ++i)
                             {
                                 input[i].type = WinAPI.INPUT_MOUSE;
-                                input[i].mi.dx = p.pt.x;
-                                input[i].mi.dy = p.pt.y;
+                                input[i].mi.dx = msllhookstruct.pt.x;
+                                input[i].mi.dy = msllhookstruct.pt.y;
                                 input[i].mi.mouseData = mouseData;
                                 input[i].mi.dwFlags = (uint)WinAPI.MouseEvent.MOUSEEVENTF_WHEEL; // vertical wheel
                                 input[i].mi.time = 0x0;
@@ -207,13 +207,18 @@ namespace TrackballScroll
             return (p.mouseData & 0xFFFF0000) >> 16; // see https://msdn.microsoft.com/de-de/library/windows/desktop/ms644970(v=vs.85).aspx
         }
 
+        private bool UseXButtons(WinAPI.MSLLHOOKSTRUCT msllhookstruct)
+        {
+            uint xbutton = GetXButtonState(msllhookstruct);
+            return (useX1 && xbutton == 1) || (useX2 && xbutton == 2);
+        }
+
         private bool IsMessageButtonDown(IntPtr wParam, WinAPI.MSLLHOOKSTRUCT msllhookstruct)
         {
-            bool messageButtonDown = false;
-            uint xbutton = GetXButtonState(msllhookstruct);
+            bool messageButtonDown = false;            
 
-            messageButtonDown = ((useX1 && xbutton == 1) || (useX2 && xbutton == 2))
-                && (WinAPI.MouseMessages.WM_XBUTTONDOWN == (WinAPI.MouseMessages)wParam);
+            messageButtonDown = UseXButtons(msllhookstruct) && (WinAPI.MouseMessages.WM_XBUTTONDOWN == (WinAPI.MouseMessages)wParam);
+            messageButtonDown |= useRButton && (WinAPI.MouseMessages.WM_RBUTTONDOWN == (WinAPI.MouseMessages)wParam);
 
             return messageButtonDown;
         }
@@ -221,10 +226,9 @@ namespace TrackballScroll
         private bool IsMessageButtonUp(IntPtr wParam, WinAPI.MSLLHOOKSTRUCT msllhookstruct)
         {
             bool messageButtonDown = false;
-            uint xbutton = GetXButtonState(msllhookstruct);
 
-            messageButtonDown = ((useX1 && xbutton == 1) || (useX2 && xbutton == 2))
-                                && (WinAPI.MouseMessages.WM_XBUTTONUP == (WinAPI.MouseMessages)wParam);
+            messageButtonDown = UseXButtons(msllhookstruct) && (WinAPI.MouseMessages.WM_XBUTTONUP == (WinAPI.MouseMessages)wParam);
+            messageButtonDown |= useRButton && (WinAPI.MouseMessages.WM_RBUTTONUP == (WinAPI.MouseMessages)wParam);
 
             return messageButtonDown;
         }

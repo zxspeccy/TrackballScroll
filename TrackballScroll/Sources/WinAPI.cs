@@ -20,7 +20,9 @@ namespace TrackballScroll
         {
             WM_MOUSEMOVE = 0x0200,
             WM_XBUTTONDOWN = 0x020B,
-            WM_XBUTTONUP = 0x020C
+            WM_XBUTTONUP = 0x020C,
+            WM_RBUTTONDOWN = 0x0204,
+            WM_RBUTTONUP = 0x0205
         }
 
         public enum MouseEvent : uint

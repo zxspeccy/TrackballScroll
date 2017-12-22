@@ -29,6 +29,7 @@ namespace TrackballScroll
         private MenuItem itemEnabled;
         private MenuItem itemUseX1;
         private MenuItem itemUseX2;
+        private MenuItem itemUseRButton;
         private MenuItem itemPreferAxis;
         private MenuItem itemEmulateMiddleButton;
         private MouseHookTrackballScroll mouseHook;
@@ -54,6 +55,11 @@ namespace TrackballScroll
             itemUseX2.Checked = useX2;
             mouseHook.useX2   = useX2;
 
+            var useRButton = Properties.Settings.Default.useRButton;
+            itemUseRButton = new MenuItem(Properties.Resources.TextButtonHookUseRButton, OnToggleUseRButton);
+            itemUseRButton.Checked = useRButton;
+            mouseHook.useRButton = useRButton;
+
             var preferAxis = Properties.Settings.Default.preferAxis;
             itemPreferAxis = new MenuItem(Properties.Resources.TextButtonPreferAxisEnabled, OnToggleAxis);
             itemPreferAxis.Checked = preferAxis;
@@ -68,6 +74,7 @@ namespace TrackballScroll
             trayMenu.MenuItems.Add(itemEnabled);
             trayMenu.MenuItems.Add(itemUseX1);
             trayMenu.MenuItems.Add(itemUseX2);
+            trayMenu.MenuItems.Add(itemUseRButton);
             trayMenu.MenuItems.Add(itemPreferAxis);
             trayMenu.MenuItems.Add(itemEmulateMiddleButton);
             trayMenu.MenuItems.Add(Properties.Resources.TextButtonAbout, OnAbout);
@@ -120,10 +127,6 @@ namespace TrackballScroll
             mouseHook.useX1 = useX1;
             Properties.Settings.Default.useX1 = useX1;
             Properties.Settings.Default.Save();
-            if (!itemUseX1.Checked && !itemUseX2.Checked)
-            {
-                OnToggleUseX2(null, null);
-            }
         }
 
         private void OnToggleUseX2(object sender, EventArgs e)
@@ -132,10 +135,14 @@ namespace TrackballScroll
             mouseHook.useX2 = itemUseX2.Checked;
             Properties.Settings.Default.useX2 = itemUseX2.Checked;
             Properties.Settings.Default.Save();
-            if (!itemUseX1.Checked && !itemUseX2.Checked)
-            {
-                OnToggleUseX1(null, null);
-            }
+        }
+
+        private void OnToggleUseRButton(object sender, EventArgs e)
+        {
+            itemUseRButton.Checked = !itemUseRButton.Checked;
+            mouseHook.useRButton = itemUseRButton.Checked;
+            Properties.Settings.Default.useRButton = itemUseRButton.Checked;
+            Properties.Settings.Default.Save();
         }
 
         private void OnToggleAxis(object sender, EventArgs e)
