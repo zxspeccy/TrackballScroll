@@ -75,7 +75,7 @@ namespace TrackballScroll
 
             bool preventCallNextHookEx = false;
             WinAPI.MSLLHOOKSTRUCT p = (WinAPI.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(WinAPI.MSLLHOOKSTRUCT));
-            uint xbutton = (p.mouseData & 0xFFFF0000) >> 16; // see https://msdn.microsoft.com/de-de/library/windows/desktop/ms644970(v=vs.85).aspx
+            uint xbutton = GetXButtonState(p);
 
 #if DEBUG
             var oldState = _state;
@@ -85,12 +85,8 @@ namespace TrackballScroll
             switch (_state)
             {
                 case State.NORMAL:
-                    if (WinAPI.MouseMessages.WM_XBUTTONDOWN == (WinAPI.MouseMessages)wParam)
+                    if (IsMessageButtonDown(wParam, p))
                     { // NORMAL->DOWN: remember position
-                        if (!(useX1 && xbutton == 1) && !(useX2 && xbutton == 2))
-                        {
-                            break;
-                        }
                         preventCallNextHookEx = true;
                         _state = State.DOWN;
                         _origin = p.pt;
@@ -101,12 +97,8 @@ namespace TrackballScroll
                     }
                     break;
                 case State.DOWN:
-                    if (WinAPI.MouseMessages.WM_XBUTTONUP == (WinAPI.MouseMessages)wParam)
+                    if (IsMessageButtonUp(wParam, p))
                     { // DOWN->NORMAL: middle button click
-                        if (!(useX1 && xbutton == 1) && !(useX2 && xbutton == 2))
-                        {
-                            break;
-                        }
                         _state = State.NORMAL;
                         if(!emulateMiddleButton)
                         {
@@ -140,12 +132,8 @@ namespace TrackballScroll
                     }
                     break;
                 case State.SCROLL:
-                    if (WinAPI.MouseMessages.WM_XBUTTONUP == (WinAPI.MouseMessages)wParam)
+                    if (IsMessageButtonUp(wParam, p))
                     { // SCROLL->NORMAL
-                        if (!(useX1 && xbutton == 1) && !(useX2 && xbutton == 2))
-                        {
-                            break;
-                        }
                         preventCallNextHookEx = true;
                         _state = State.NORMAL;
                     }
@@ -212,6 +200,33 @@ namespace TrackballScroll
             }
             // Return TRUE if handled
             return (preventCallNextHookEx ? (IntPtr)1 : NativeMethods.CallNextHookEx(_hookID, nCode, wParam, lParam));
+        }
+
+        private static uint GetXButtonState(WinAPI.MSLLHOOKSTRUCT p)
+        {
+            return (p.mouseData & 0xFFFF0000) >> 16; // see https://msdn.microsoft.com/de-de/library/windows/desktop/ms644970(v=vs.85).aspx
+        }
+
+        private bool IsMessageButtonDown(IntPtr wParam, WinAPI.MSLLHOOKSTRUCT msllhookstruct)
+        {
+            bool messageButtonDown = false;
+            uint xbutton = GetXButtonState(msllhookstruct);
+
+            messageButtonDown = ((useX1 && xbutton == 1) || (useX2 && xbutton == 2))
+                && (WinAPI.MouseMessages.WM_XBUTTONDOWN == (WinAPI.MouseMessages)wParam);
+
+            return messageButtonDown;
+        }
+
+        private bool IsMessageButtonUp(IntPtr wParam, WinAPI.MSLLHOOKSTRUCT msllhookstruct)
+        {
+            bool messageButtonDown = false;
+            uint xbutton = GetXButtonState(msllhookstruct);
+
+            messageButtonDown = ((useX1 && xbutton == 1) || (useX2 && xbutton == 2))
+                                && (WinAPI.MouseMessages.WM_XBUTTONUP == (WinAPI.MouseMessages)wParam);
+
+            return messageButtonDown;
         }
 
         public void Dispose()
