@@ -4,12 +4,12 @@ TrackballScroll
 ===============
 **Allow scrolling with a trackball without scroll wheel by using a low level mouse hook.**
 
-Changes the behaviour of one or both X-Buttons (typically buttons 3, 4) to
-- Scrolling, i.e. vertical/horizontal mouse wheel events, when an X-Button is pressed and the trackball is moved vertically/horizontally
+Changes the behaviour of one X-Buttons or right click button (typically buttons 2, 3, 4) to
+- Scrolling, i.e. vertical/horizontal mouse wheel events, when an X/right-Button is pressed and the trackball is moved vertically/horizontally
 - Middle button click, when an X-Button is pressed and released without trackball movement
 
 ###### Requirements
-- A trackball or mouse with X-Buttons
+- A trackball or mouse
 - A Microsoft Windows x64 operating system with .NET 4.5.2
 
 This software has been tested with a *Logitech Marble Trackball*(tm) and *Microsoft Windows 10*.
@@ -30,6 +30,7 @@ https://github.com/Seelge/TrackballScroll/releases/latest
 - Build the solution
 
 ###### Version history
+- v5 allow to use right (context menu) button to enable scroll emulation
 - v4 prevents #16... sort of (middle clicks can be disabled if necessary using the tray menu).
 - v3 feature #12: Allows to choose which X-buttons are used and saves the settings. Also changed versioning scheme to single numbers.
 - v2.1.2 fixes #14. Compatibility with Windows 10 versions of 2017.
