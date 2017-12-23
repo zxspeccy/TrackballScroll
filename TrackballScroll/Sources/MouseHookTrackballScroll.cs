@@ -29,8 +29,10 @@ namespace TrackballScroll
         const uint WHEEL_FACTOR = 1; // number of wheel events. The lines scrolled per wheel event are determined by the Microsoft Windows mouse wheel settings.
 
         public bool preferAxisMovement { get; set; }
+#if DEBUG
         private NLog.ILogger _log;
         private NLog.ILogger log { get { return _log; } }
+#endif
         private System.Timers.Timer timer { get; set; }
         public bool useX1 { get; set; }
         public bool useX2 { get; set; }
